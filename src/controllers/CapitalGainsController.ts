@@ -7,6 +7,14 @@ import { InMemoryStockOperationRepository } from '../repositories/InMemoryStockO
 This class is responsible for processing the input from the user and returning the results of the simulation.
 It reads the input, extracts all JSON arrays from it, processes each array independently and collects all results.
 Then it prints each result array on a new line.
+
+Usage:
+1. Piped input: echo '[{"operation":"buy", "unit-cost":10.00, "quantity": 100}]' | bun run src/index.ts
+2. File redirection: bun run src/index.ts < input.txt
+3. Interactive input: 
+   - Run bun run src/index.ts
+   - Type your JSON array
+   - Press Enter and then Ctrl+D (Unix/Mac) or Ctrl+Z then Enter (Windows) to signal end of input
 */
 export class CapitalGainsController {
   /* 
@@ -109,7 +117,12 @@ export class CapitalGainsController {
 
   /*
   This method reads the input from the user.
-  It returns a promise that resolves to the input string.
+  It waits for complete input followed by EOF signal (Ctrl+D on Unix/Mac or Ctrl+Z on Windows).
+  
+  This supports:
+  1. Direct terminal input (type and press Ctrl+D when done)
+  2. Piped input (echo '[...]' | bun run src/index.ts)
+  3. File redirection (bun run src/index.ts < input.txt)
   */
   private async readInput(): Promise<string> {
     return new Promise((resolve) => {

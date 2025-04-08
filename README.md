@@ -52,13 +52,55 @@ The application reads input from stdin and writes output to stdout. Input should
 }
 ```
 
-Example:
+### Input Methods
+
+You can provide input to the application in three ways:
+
+#### 1. Using a script file
+
+The simplest way is to use one of the provided script files:
+
+```
+sh scripts/1_run_case_1.sh
+```
+
+#### 2. Piping input directly
 
 ```
 echo '[{"operation":"buy", "unit-cost":10.00, "quantity": 10000 }, {"operation":"sell", "unit-cost":20.00, "quantity": 5000 }]' | bun run src/index.ts
 ```
 
-Output will be a JSON array of tax results:
+#### 3. Input redirection from a file
+
+Create a file with your JSON array(s), one per line:
+
+```
+# content of input.txt
+[{"operation":"buy", "unit-cost":10.00, "quantity": 100}, {"operation":"sell", "unit-cost":15.00, "quantity": 50}]
+[{"operation":"buy", "unit-cost":20.00, "quantity": 200}, {"operation":"sell", "unit-cost":10.00, "quantity": 100}]
+```
+
+Then run:
+
+```
+bun run src/index.ts < input.txt
+```
+
+#### 4. Interactive input
+
+You can also enter input interactively:
+
+```
+bun run src/index.ts
+```
+
+Type your JSON array and press Enter. Then signal the end of input by pressing:
+- Ctrl+D on Unix/Mac
+- Ctrl+Z followed by Enter on Windows
+
+### Output
+
+The application will output a JSON array of tax results, one for each operation:
 
 ```
 [{"tax": 0}, {"tax": 10000}]
