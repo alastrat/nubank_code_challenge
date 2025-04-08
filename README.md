@@ -162,12 +162,6 @@ Run tests in watch mode:
 bun test:watch
 ```
 
-Generate test coverage report:
-
-```
-bun test:coverage
-```
-
 Run tests:
 
 ```
