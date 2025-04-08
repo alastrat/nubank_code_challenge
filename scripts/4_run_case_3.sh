@@ -1,0 +1,3 @@
+echo '[{"operation":"buy", "unit-cost":10.00, "quantity": 10000},
+{"operation":"sell", "unit-cost":5.00, "quantity": 5000},
+{"operation":"sell", "unit-cost":20.00, "quantity": 3000}]' | bun run src/index.ts
