@@ -19,7 +19,8 @@ A command-line application that calculates capital gains tax for stock market op
 
 1. Clone the repository
 2. Install dependencies:
-```bash
+
+```
 bun install
 ```
 
@@ -43,7 +44,7 @@ The application follows clean architecture principles:
 
 The application reads input from stdin and writes output to stdout. Input should be a JSON array of operations, where each operation has the following format:
 
-```json
+```
 {
   "operation": "buy" | "sell",
   "unit-cost": number,
@@ -52,12 +53,14 @@ The application reads input from stdin and writes output to stdout. Input should
 ```
 
 Example:
-```bash
+
+```
 echo '[{"operation":"buy", "unit-cost":10.00, "quantity": 10000 }, {"operation":"sell", "unit-cost":20.00, "quantity": 5000 }]' | bun run src/index.ts
 ```
 
 Output will be a JSON array of tax results:
-```json
+
+```
 [{"tax": 0}, {"tax": 10000}]
 ```
 
@@ -65,7 +68,7 @@ Output will be a JSON array of tax results:
 
 The project includes several test scripts in the `scripts/` folder that demonstrate different scenarios:
 
-```bash
+```
 # Basic Operations
 sh scripts/1_run_case_1.sh    # Simple buy/sell sequence with no tax (amount ≤ $20,000)
 
@@ -88,13 +91,15 @@ sh scripts/10_run_case_9.sh   # Progressive profit/loss scenarios with tax impli
 Example test cases and their expected outputs:
 
 1. Basic buy/sell with no tax:
-```json
+
+```
 Input: [{"operation":"buy", "unit-cost":10.0, "quantity": 100}, {"operation":"sell", "unit-cost":15.0, "quantity": 50}, {"operation":"sell", "unit-cost":15.0, "quantity": 50}]
 Output: [{"tax":0.0}, {"tax":0.0}, {"tax":0.0}]
 ```
 
 2. High-value operation with tax:
-```json
+
+```
 Input: [{"operation":"buy", "unit-cost":10.0, "quantity": 10000}, {"operation":"sell", "unit-cost":20.0, "quantity": 5000}, {"operation":"sell", "unit-cost":5.0, "quantity": 5000}]
 Output: [{"tax":0.0}, {"tax":10000.0}, {"tax":0.0}]
 ```
@@ -108,18 +113,22 @@ Each script demonstrates specific aspects of the tax calculation rules:
 - Complex scenarios with mixed profits and losses
 
 ## Testing
+
 Run tests in watch mode:
-```bash
+
+```
 bun test:watch
 ```
 
 Generate test coverage report:
-```bash
+
+```
 bun test:coverage
 ```
 
 Run tests:
-```bash
+
+```
 bun test
 ```
 
