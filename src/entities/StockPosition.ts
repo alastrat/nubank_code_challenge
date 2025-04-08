@@ -1,5 +1,12 @@
 import { StockOperation } from './StockOperation';
 
+/**
+ * Represents the position of a stock in the portfolio.
+ * 
+ * @property quantity - The quantity of the stock in the position.
+ * @property weightedAveragePrice - The weighted average price of the stock in the position.
+ * @property accumulatedLoss - The accumulated loss of the stock in the position.
+ */
 export class StockPosition {
   constructor(
     public quantity: number = 0,
