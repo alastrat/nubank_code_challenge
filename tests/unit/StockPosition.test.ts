@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { StockPosition } from '../../src/entities/StockPosition';
 import { StockOperation } from '../../src/entities/StockOperation';
 
@@ -102,6 +102,60 @@ describe('StockPosition', () => {
       // Ensure position state remains unchanged after the error
       expect(position.quantity).toBe(100);
       expect(position.weightedAveragePrice).toBe(10.0);
+    });
+  });
+
+  describe('error counting and blocking', () => {
+    let position: StockPosition;
+
+    beforeEach(() => {
+      position = new StockPosition();
+    });
+
+    it('should initialize with an errorCount of 0 and not blocked', () => {
+      expect(position.errorCount).toBe(0);
+      expect(position.isBlocked()).toBe(false);
+    });
+
+    it('should increment errorCount', () => {
+      position.incrementErrorCount();
+      expect(position.errorCount).toBe(1);
+      position.incrementErrorCount();
+      expect(position.errorCount).toBe(2);
+    });
+
+    it('should not be blocked after 1 or 2 errors', () => {
+      position.incrementErrorCount(); // 1st error
+      expect(position.isBlocked()).toBe(false);
+      position.incrementErrorCount(); // 2nd error
+      expect(position.isBlocked()).toBe(false);
+    });
+
+    it('should be blocked after 3 errors', () => {
+      position.incrementErrorCount(); // 1st
+      position.incrementErrorCount(); // 2nd
+      position.incrementErrorCount(); // 3rd
+      expect(position.errorCount).toBe(3);
+      expect(position.isBlocked()).toBe(true);
+    });
+
+    it('should remain blocked after more than 3 errors', () => {
+      position.incrementErrorCount(); // 1st
+      position.incrementErrorCount(); // 2nd
+      position.incrementErrorCount(); // 3rd
+      position.incrementErrorCount(); // 4th
+      expect(position.errorCount).toBe(4);
+      expect(position.isBlocked()).toBe(true);
+    });
+
+    it('reset() should reset errorCount to 0', () => {
+      position.incrementErrorCount();
+      position.incrementErrorCount();
+      position.incrementErrorCount();
+      expect(position.isBlocked()).toBe(true);
+      position.reset();
+      expect(position.errorCount).toBe(0);
+      expect(position.isBlocked()).toBe(false);
     });
   });
 }); 

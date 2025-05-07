@@ -169,4 +169,54 @@ describe('CapitalGainsService', () => {
       expect(results[4]?.tax).toBeCloseTo(1048.8, 1); 
     });
   });
+
+  describe('execute with user blocking after 3 errors', () => {
+    it('should block subsequent operations after 3 errors and report them correctly', () => {
+      // Setup operations that will cause errors
+      repository.save(new StockOperation('buy', 10.0, 50));      // 1. Buy 50 shares
+      repository.save(new StockOperation('sell', 15.0, 100));     // 2. Error 1: Sell 100 (insufficient)
+      repository.save(new StockOperation('buy', 10.0, 20));      // 3. Buy 20 (current: 50+20=70 shares)
+      repository.save(new StockOperation('sell', 15.0, 100));     // 4. Error 2: Sell 100 (insufficient, has 70)
+      repository.save(new StockOperation('buy', 10.0, 10));      // 5. Buy 10 (current: 70+10=80 shares)
+      repository.save(new StockOperation('sell', 15.0, 100));     // 6. Error 3: Sell 100 (insufficient, has 80)
+      
+      // This operation should be blocked
+      repository.save(new StockOperation('buy', 20.0, 100));      // 7. Attempted Buy (should be blocked)
+      // This operation should also be blocked
+      repository.save(new StockOperation('sell', 25.0, 10));     // 8. Attempted Sell (should be blocked)
+
+      const results = service.execute();
+
+      expect(results).toHaveLength(8);
+      // Valid operations
+      expect(results[0]).toEqual({ tax: 0.0 }); // Op 1 (Buy)
+      expect(results[2]).toEqual({ tax: 0.0 }); // Op 3 (Buy)
+      expect(results[4]).toEqual({ tax: 0.0 }); // Op 5 (Buy)
+
+      // Error-inducing operations (should still report their specific errors)
+      expect(results[1]).toEqual({ error: 'Insufficient shares to complete the sell operation.' }); // Op 2 (Error 1)
+      expect(results[3]).toEqual({ error: 'Insufficient shares to complete the sell operation.' }); // Op 4 (Error 2)
+      expect(results[5]).toEqual({ error: 'Insufficient shares to complete the sell operation.' }); // Op 6 (Error 3)
+
+      // Blocked operations
+      expect(results[6]).toEqual({ error: 'User blocked due to excessive errors.' }); // Op 7 (Blocked)
+      expect(results[7]).toEqual({ error: 'User blocked due to excessive errors.' }); // Op 8 (Blocked)
+    });
+
+    it('should process operations normally if errors are less than 3', () => {
+      repository.save(new StockOperation('buy', 10.0, 50));      // 1. Buy 50
+      repository.save(new StockOperation('sell', 15.0, 100));     // 2. Error 1
+      repository.save(new StockOperation('buy', 10.0, 200));     // 3. Buy 200 (current 50+200=250)
+      repository.save(new StockOperation('sell', 15.0, 300));     // 4. Error 2
+      repository.save(new StockOperation('sell', 12.0, 100));     // 5. Valid Sell (current 250-100=150, profit: (12-10)*100 = 200, total 1200 <=20k)
+
+      const results = service.execute();
+      expect(results).toHaveLength(5);
+      expect(results[0]).toEqual({ tax: 0.0 });
+      expect(results[1]).toEqual({ error: 'Insufficient shares to complete the sell operation.' });
+      expect(results[2]).toEqual({ tax: 0.0 });
+      expect(results[3]).toEqual({ error: 'Insufficient shares to complete the sell operation.' });
+      expect(results[4]).toEqual({ tax: 0.0 }); // WAP for the 50 shares was 10. (12-10)*100=200 profit. Sell total 12*100 = 1200 (<=20k)
+    });
+  });
 }); 

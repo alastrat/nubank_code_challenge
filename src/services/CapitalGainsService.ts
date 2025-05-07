@@ -41,6 +41,11 @@ export class CapitalGainsService {
   It updates the position, calculates the profit, and then calculates the tax.
   */
   private processOperation(operation: StockOperation, position: StockPosition): TaxResultDTO {
+    // Check if user is blocked before processing any operation
+    if (position.isBlocked()) {
+      return { error: "User blocked due to excessive errors." };
+    }
+
     try {
       if (operation.operation === 'buy') {
         position.updatePosition(operation);
@@ -81,6 +86,9 @@ export class CapitalGainsService {
       return { tax };
 
     } catch (e: any) {
+      // Increment error count on the position object
+      position.incrementErrorCount();
+
       // Ensure e.message is a string before assigning it to the error property.
       if (typeof e.message === 'string') {
         return { error: e.message };

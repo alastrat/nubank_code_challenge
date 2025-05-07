@@ -1,11 +1,22 @@
 import { StockOperation } from './StockOperation';
 
 export class StockPosition {
+  private static readonly MAX_ERRORS = 3;
+
   constructor(
     public quantity: number = 0,
     public weightedAveragePrice: number = 0.0,
-    public accumulatedLoss: number = 0.0
+    public accumulatedLoss: number = 0.0,
+    public errorCount: number = 0
   ) { }
+
+  public incrementErrorCount(): void {
+    this.errorCount++;
+  }
+
+  public isBlocked(): boolean {
+    return this.errorCount >= StockPosition.MAX_ERRORS;
+  }
 
   /*
   This method updates the position for a given stock operation.
@@ -67,5 +78,6 @@ export class StockPosition {
     this.quantity = 0;
     this.weightedAveragePrice = 0.0;
     this.accumulatedLoss = 0.0;
+    this.errorCount = 0;
   }
 } 
