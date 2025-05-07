@@ -7,5 +7,6 @@ export interface StockOperationDTO {
 }
 
 export interface TaxResultDTO {
-  tax: number;
+  tax?: number;
+  error?: string;
 } 

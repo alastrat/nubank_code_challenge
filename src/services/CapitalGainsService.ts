@@ -41,37 +41,53 @@ export class CapitalGainsService {
   It updates the position, calculates the profit, and then calculates the tax.
   */
   private processOperation(operation: StockOperation, position: StockPosition): TaxResultDTO {
-    if (operation.operation === 'buy') {
-      position.updatePosition(operation);
-      return { tax: 0.0 };
-    }
-
-    // For sell operations
-    const totalAmount = this.roundToOneDecimal(operation.getTotalAmount());
-    const profit = position.calculateProfit(operation);
-
-    // Update position after calculating profit but before calculating tax
-    position.updatePosition(operation);
-
-    // If total amount is below threshold, no tax but still track losses
-    if (totalAmount <= CapitalGainsService.TAX_THRESHOLD) {
-      if (profit < 0) {
-        position.accumulatedLoss = this.roundToOneDecimal(position.accumulatedLoss + Math.abs(profit));
+    try {
+      if (operation.operation === 'buy') {
+        position.updatePosition(operation);
+        return { tax: 0.0 };
       }
-      return { tax: 0.0 };
+
+      // ---- SELL operation ----
+      // 1. Calculate profit BEFORE position is mutated by the sell.
+      //    calculateProfit uses operation.quantity. If this quantity is invalid (too high),
+      //    the subsequent position.updatePosition will throw an error.
+      const profit = position.calculateProfit(operation);
+
+      // 2. Attempt to update position. This will THROW if operation.quantity > current position.quantity
+      //    due to the check added in StockPosition.updatePosition.
+      position.updatePosition(operation);
+
+      // 3. If execution reaches here, the sell operation was valid and the position is updated.
+      const totalAmount = this.roundToOneDecimal(operation.getTotalAmount());
+
+      // If total amount is below threshold, no tax, but still track losses.
+      if (totalAmount <= CapitalGainsService.TAX_THRESHOLD) {
+        if (profit < 0) {
+          position.accumulatedLoss = this.roundToOneDecimal(position.accumulatedLoss + Math.abs(profit));
+        }
+        return { tax: 0.0 };
+      }
+
+      // If it's a loss (or zero profit) and above the threshold, accumulate it and return no tax.
+      if (profit <= 0) {
+        position.accumulatedLoss = this.roundToOneDecimal(position.accumulatedLoss + Math.abs(profit));
+        return { tax: 0.0 };
+      }
+
+      // For profits above the threshold, first deduct any accumulated losses.
+      const taxableProfit = this.calculateTaxableProfit(profit, position);
+      const tax = taxableProfit > 0 ? this.roundToOneDecimal(taxableProfit * CapitalGainsService.TAX_RATE) : 0.0;
+
+      return { tax };
+
+    } catch (e: any) {
+      // Ensure e.message is a string before assigning it to the error property.
+      if (typeof e.message === 'string') {
+        return { error: e.message };
+      }
+      // Fallback error message if e.message is not a string.
+      return { error: "An unexpected error occurred during operation processing." };
     }
-
-    // If it's a loss, accumulate it and return no tax
-    if (profit <= 0) {
-      position.accumulatedLoss = this.roundToOneDecimal(position.accumulatedLoss + Math.abs(profit));
-      return { tax: 0.0 };
-    }
-
-    // For profits, first deduct any accumulated losses
-    const taxableProfit = this.calculateTaxableProfit(profit, position);
-    const tax = taxableProfit > 0 ? this.roundToOneDecimal(taxableProfit * CapitalGainsService.TAX_RATE) : 0.0;
-
-    return { tax };
   }
 
   /*

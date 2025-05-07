@@ -89,4 +89,19 @@ describe('StockPosition', () => {
     expect(position.weightedAveragePrice).toBe(0);
     expect(position.accumulatedLoss).toBe(0);
   });
+
+  describe('updatePosition with insufficient shares', () => {
+    it('should throw an error when trying to sell more shares than available', () => {
+      const position = new StockPosition(100, 10.0, 0); // Start with 100 shares
+      const sellOperation = new StockOperation('sell', 15.0, 150); // Try to sell 150
+
+      expect(() => position.updatePosition(sellOperation)).toThrowError(
+        'Insufficient shares to complete the sell operation.'
+      );
+
+      // Ensure position state remains unchanged after the error
+      expect(position.quantity).toBe(100);
+      expect(position.weightedAveragePrice).toBe(10.0);
+    });
+  });
 }); 

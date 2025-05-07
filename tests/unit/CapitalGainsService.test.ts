@@ -136,4 +136,37 @@ describe('CapitalGainsService', () => {
     const hasOneDecimalAtMost = (taxValue * 10) % 1 === 0;
     expect(hasOneDecimalAtMost).toBeTruthy();
   });
+
+  describe('execute with insufficient shares', () => {
+    it('should return an error DTO for the sell operation if shares are insufficient', () => {
+      repository.save(new StockOperation('buy', 10.0, 100));      // Buy 100 shares
+      repository.save(new StockOperation('sell', 15.0, 150));     // Attempt to sell 150 shares
+
+      const results = service.execute();
+
+      expect(results).toHaveLength(2);
+      expect(results[0]).toEqual({ tax: 0.0 }); // First operation (buy) is fine
+      expect(results[1]).toEqual({ error: 'Insufficient shares to complete the sell operation.' }); // Second operation (sell) errors
+    });
+
+    it('should process subsequent operations normally after an insufficient shares error', () => {
+      repository.save(new StockOperation('buy', 10.0, 100));      // 1. Buy 100 shares
+      repository.save(new StockOperation('sell', 15.0, 150));     // 2. Attempt to sell 150 (error)
+      repository.save(new StockOperation('sell', 12.0, 50));      // 3. Sell 50 (valid, profit (12-10)*50 = 100, total: 12*50=600 <= 20000, so tax 0)
+      repository.save(new StockOperation('buy', 20.0, 2000));    // 4. Buy 2000 at 20 (WAP changes, total 50*10 + 2000*20 = 40500 / 2050 = 19.756)
+      repository.save(new StockOperation('sell', 25.0, 1000));   // 5. Sell 1000 (profit (25-19.756)*1000 = 5244. total: 25*1000=25000 > 20000, tax 5244*0.2=1048.8)
+
+      const results = service.execute();
+
+      expect(results).toHaveLength(5);
+      expect(results[0]).toEqual({ tax: 0.0 });
+      expect(results[1]).toEqual({ error: 'Insufficient shares to complete the sell operation.' });
+      // After an error, the position state for that specific error-causing operation should not have changed.
+      // The subsequent valid sell operation should operate on the state from before the failed sell.
+      // So, it sells 50 from the initial 100 shares.
+      expect(results[2]).toEqual({ tax: 0.0 }); // Profit was 100, total amount 600 (<= 20k threshold)
+      expect(results[3]).toEqual({ tax: 0.0 }); // Buy operation
+      expect(results[4]?.tax).toBeCloseTo(1048.8, 1); 
+    });
+  });
 }); 

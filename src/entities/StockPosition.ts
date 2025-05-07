@@ -12,6 +12,10 @@ export class StockPosition {
   It checks if the operation is a buy or sell and updates the position accordingly.
   */
   public updatePosition(operation: StockOperation): void {
+    if (operation.operation === 'sell' && operation.quantity > this.quantity) {
+      throw new Error("Insufficient shares to complete the sell operation.");
+    }
+
     if (operation.operation === 'buy') {
       this.updateBuyPosition(operation);
     } else {
