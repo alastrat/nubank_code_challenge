@@ -4,7 +4,8 @@ export class StockOperation {
   constructor(
     public readonly operation: OperationType,
     public readonly unitCost: number,
-    public readonly quantity: number
+    public readonly quantity: number,
+    public readonly symbol?: string
   ) {
     this.validate();
   }

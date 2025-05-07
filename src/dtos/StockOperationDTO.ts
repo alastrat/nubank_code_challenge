@@ -4,6 +4,7 @@ export interface StockOperationDTO {
   operation: OperationType;
   'unit-cost': number;
   quantity: number;
+  symbol?: string;
 }
 
 export interface TaxResultDTO {
