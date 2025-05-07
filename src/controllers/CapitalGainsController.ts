@@ -108,7 +108,7 @@ export class CapitalGainsController {
         if (!dto.operation || !dto['unit-cost'] || !dto.quantity) {
           throw new Error('Invalid operation format');
         }
-        return new StockOperation(dto.operation, dto['unit-cost'], dto.quantity);
+        return new StockOperation(dto.operation, dto['unit-cost'], dto.quantity, dto.symbol);
       });
     } catch (error) {
       throw new Error('Invalid input format. Expected a valid JSON array of operations.');

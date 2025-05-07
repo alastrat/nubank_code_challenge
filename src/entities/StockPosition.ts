@@ -1,25 +1,44 @@
 import { StockOperation } from './StockOperation';
 
 export class StockPosition {
-  constructor(
-    public quantity: number = 0,
-    public weightedAveragePrice: number = 0.0,
-    public accumulatedLoss: number = 0.0
-  ) { }
+  private static readonly MAX_ERRORS = 3;
+
+  // Per-symbol tracking
+  private quantities: Record<string, number>;
+  private weightedAveragePrices: Record<string, number>;
+
+  // Global tracking (for now)
+  public accumulatedLoss: number;
+  public errorCount: number;
+
+  constructor() {
+    this.quantities = {};
+    this.weightedAveragePrices = {};
+    this.accumulatedLoss = 0.0;
+    this.errorCount = 0;
+  }
 
   /*
   This method updates the position for a given stock operation.
   It checks if the operation is a buy or sell and updates the position accordingly.
   */
   public updatePosition(operation: StockOperation): void {
-    if (operation.operation === 'sell' && operation.quantity > this.quantity) {
-      throw new Error("Insufficient shares to complete the sell operation.");
+    const symbol = operation.symbol;
+    if (!symbol) {
+      // Or handle as a specific error, for now, we assume valid operations have titles
+      throw new Error("Operation title (symbol) is missing.");
+    }
+
+    const currentQuantity = this.quantities[symbol] || 0;
+
+    if (operation.operation === 'sell' && operation.quantity > currentQuantity) {
+      throw new Error(`Insufficient shares of ${symbol} to complete the sell operation. Have: ${currentQuantity}, Need: ${operation.quantity}`);
     }
 
     if (operation.operation === 'buy') {
-      this.updateBuyPosition(operation);
+      this.updateBuyPosition(operation, symbol);
     } else {
-      this.updateSellPosition(operation);
+      this.updateSellPosition(operation, symbol);
     }
   }
 
@@ -28,13 +47,16 @@ export class StockPosition {
   It calculates the total quantity and total cost of the position.
   It then updates the weighted average price and quantity.
   */
-  private updateBuyPosition(operation: StockOperation): void {
-    const totalQuantity = this.quantity + operation.quantity;
-    const totalCost = (this.quantity * this.weightedAveragePrice) +
+  private updateBuyPosition(operation: StockOperation, symbol: string): void {
+    const currentQuantity = this.quantities[symbol] || 0;
+    const currentWAP = this.weightedAveragePrices[symbol] || 0.0;
+
+    const totalQuantity = currentQuantity + operation.quantity;
+    const totalCost = (currentQuantity * currentWAP) +
       (operation.quantity * operation.unitCost);
 
-    this.weightedAveragePrice = totalQuantity > 0 ? totalCost / totalQuantity : operation.unitCost;
-    this.quantity = totalQuantity;
+    this.weightedAveragePrices[symbol] = totalQuantity > 0 ? totalCost / totalQuantity : operation.unitCost;
+    this.quantities[symbol] = totalQuantity;
   }
 
   /*
@@ -42,11 +64,15 @@ export class StockPosition {
   It decreases the quantity of the position and updates the weighted average price.
   If the quantity becomes zero, it resets the weighted average price to zero.
   */
-  private updateSellPosition(operation: StockOperation): void {
-    this.quantity -= operation.quantity;
+  private updateSellPosition(operation: StockOperation, symbol: string): void {
+    // The check for sufficient quantity is already done in updatePosition
+    this.quantities[symbol]! -= operation.quantity;
 
-    if (this.quantity === 0) {
-      this.weightedAveragePrice = 0;
+    if (this.quantities[symbol]! === 0) {
+      // Optionally, remove the symbol from WAP or set to 0. Setting to 0 is fine.
+      this.weightedAveragePrices[symbol] = 0;
+      // We could also delete this.quantities[symbol] and this.weightedAveragePrices[symbol]
+      // if quantity is zero to keep the objects cleaner, but it's not strictly necessary.
     }
   }
 
@@ -56,7 +82,14 @@ export class StockPosition {
   multiplied by the quantity.
   */
   public calculateProfit(operation: StockOperation): number {
-    return (operation.unitCost - this.weightedAveragePrice) * operation.quantity;
+    const symbol = operation.symbol;
+    if (!symbol) {
+      throw new Error("Operation title (symbol) is missing for profit calculation.");
+    }
+    const currentWAP = this.weightedAveragePrices[symbol] || 0; // Default to 0 if symbol not yet bought
+    // If currentWAP is 0 (e.g., selling without buying, which should be caught by quantity check, but as a safeguard)
+    // profit calculation might be misleading. However, sell validation should prevent this.
+    return (operation.unitCost - currentWAP) * operation.quantity;
   }
 
   /*
@@ -64,8 +97,18 @@ export class StockPosition {
   It sets the quantity to zero, the weighted average price to zero, and the accumulated loss to zero.
   */
   public reset(): void {
-    this.quantity = 0;
-    this.weightedAveragePrice = 0.0;
+    this.quantities = {};
+    this.weightedAveragePrices = {};
     this.accumulatedLoss = 0.0;
+  }
+
+  // Helper method to get current quantity for a symbol (optional, could be useful for testing or other services)
+  public getQuantityForSymbol(symbol: string): number {
+    return this.quantities[symbol] || 0;
+  }
+
+  // Helper method to get WAP for a symbol (optional)
+  public getWAPForSymbol(symbol: string): number {
+    return this.weightedAveragePrices[symbol] || 0;
   }
 } 
